@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log"
 	"strings"
 
 	"github.com/PuerkitoBio/goquery"
@@ -16,7 +15,6 @@ import (
 
 // get login code from nike
 func (n *ImapOpts) getNikeLoginCode() (string, error) {
-	log.Println(n.Imap.Imap)
 	// connect to server
 	c, err := client.DialTLS(n.Imap.Imap, nil)
 	if err != nil {

@@ -4,17 +4,19 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log"
 	"strings"
 
 	"github.com/PuerkitoBio/goquery"
 	"github.com/emersion/go-imap"
 	"github.com/emersion/go-imap/client"
+	_ "github.com/emersion/go-message/charset"
 	"github.com/emersion/go-message/mail"
 )
 
 // get login code from nike
 func (n *ImapOpts) getNikeLoginCode() (string, error) {
-
+	log.Println(n.Imap.Imap)
 	// connect to server
 	c, err := client.DialTLS(n.Imap.Imap, nil)
 	if err != nil {
@@ -36,7 +38,7 @@ func (n *ImapOpts) getNikeLoginCode() (string, error) {
 	}
 
 	var boxes []string
-	mailboxes := make(chan *imap.MailboxInfo, 10)
+	mailboxes := make(chan *imap.MailboxInfo, 5)
 	done := make(chan error, 1)
 	go func() {
 		done <- c.List("", "*", mailboxes)
@@ -68,9 +70,9 @@ func (n *ImapOpts) getNikeLoginCode() (string, error) {
 		}
 
 		var to, from uint32
-		if mbox.Messages > 50 {
+		if mbox.Messages > 30 {
 			from = mbox.Messages
-			to = mbox.Messages - 50
+			to = mbox.Messages - 30
 		} else {
 			from = mbox.Messages
 			to = 0
@@ -83,7 +85,7 @@ func (n *ImapOpts) getNikeLoginCode() (string, error) {
 		var section imap.BodySectionName
 		items := []imap.FetchItem{section.FetchItem()}
 
-		messages := make(chan *imap.Message, 10)
+		messages := make(chan *imap.Message, 8)
 
 		go func() {
 			c.Fetch(seqSet, items, messages)
@@ -117,18 +119,14 @@ func (n *ImapOpts) getNikeLoginCode() (string, error) {
 				maildate = date.Unix()
 			}
 
-			if to, err := header.AddressList("To"); err == nil {
-				if len(to) == 0 {
-					continue
-				}
-				address = to[0].String()
+			if subject, err := header.Subject(); err == nil {
+				mailsubject = strings.ToLower(subject)
 			}
-
 			if err != nil {
 				continue
 			}
 
-			if !strings.Contains(strings.ToLower(address), strings.ToLower(n.ReceiverEmail)) {
+			if !strings.Contains(strings.ToLower(mailsubject), "code") {
 				continue
 			}
 
@@ -143,14 +141,18 @@ func (n *ImapOpts) getNikeLoginCode() (string, error) {
 				continue
 			}
 
-			if subject, err := header.Subject(); err == nil {
-				mailsubject = strings.ToLower(subject)
+			if to, err := header.AddressList("To"); err == nil {
+				if len(to) == 0 {
+					continue
+				}
+				address = to[0].String()
 			}
+
 			if err != nil {
 				continue
 			}
 
-			if !strings.Contains(strings.ToLower(mailsubject), "code") {
+			if !strings.Contains(strings.ToLower(address), strings.ToLower(n.ReceiverEmail)) {
 				continue
 			}
 

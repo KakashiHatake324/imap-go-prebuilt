@@ -1,5 +1,5 @@
 To install
-```go get ```
+`go get github.com/KakashiHatake324/imap-go-prebuilt`
 
 Use case - retrieve nike login code (if you don't add catchall it will use receiver details, if you add catchall information, it will use catchall and retrieve for the receiver)
 ```go

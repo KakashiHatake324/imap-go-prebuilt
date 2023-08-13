@@ -4,6 +4,7 @@ import (
 	"time"
 )
 
+// fetch the email information with the prebuilt functions
 func (n *ImapOpts) FetchEmail() (string, error) {
 	var message string
 	var err error
@@ -12,6 +13,22 @@ func (n *ImapOpts) FetchEmail() (string, error) {
 	case Nike:
 		for i := 1; i < n.MaxChecks; i++ {
 			message, err = n.getNikeLoginCode()
+			if err == nil {
+				break
+			}
+			time.Sleep(5 * time.Second)
+		}
+	case TicketMaster:
+		for i := 1; i < n.MaxChecks; i++ {
+			message, err = n.getTicketMasterMFA()
+			if err == nil {
+				break
+			}
+			time.Sleep(5 * time.Second)
+		}
+	case Footsites:
+		for i := 1; i < n.MaxChecks; i++ {
+			message, err = n.getFLXActivationLink()
 			if err == nil {
 				break
 			}

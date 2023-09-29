@@ -19,4 +19,5 @@ const (
 	Nike         = "nike"
 	TicketMaster = "tm"
 	Footsites    = "foot"
+	Walmart      = "walmart"
 )

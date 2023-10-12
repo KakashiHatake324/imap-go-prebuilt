@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log"
 	"strings"
 
 	"github.com/PuerkitoBio/goquery"
@@ -149,10 +150,10 @@ func (n *ImapOpts) getNikeLoginCode() (string, error) {
 			if err != nil {
 				continue
 			}
-
 			if !strings.Contains(strings.ToLower(address), strings.ToLower(n.ReceiverEmail)) {
 				continue
 			}
+			log.Println(address, n.ReceiverEmail)
 
 			for {
 				p, err := mr.NextPart()

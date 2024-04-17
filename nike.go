@@ -4,10 +4,9 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log"
+	"regexp"
 	"strings"
 
-	"github.com/PuerkitoBio/goquery"
 	"github.com/emersion/go-imap"
 	"github.com/emersion/go-imap/client"
 	_ "github.com/emersion/go-message/charset"
@@ -121,9 +120,6 @@ func (n *ImapOpts) getNikeLoginCode() (string, error) {
 			if subject, err := header.Subject(); err == nil {
 				mailsubject = strings.ToLower(subject)
 			}
-			if err != nil {
-				continue
-			}
 
 			if !strings.Contains(strings.ToLower(mailsubject), "code") {
 				continue
@@ -131,9 +127,6 @@ func (n *ImapOpts) getNikeLoginCode() (string, error) {
 
 			if from, err := header.AddressList("From"); err == nil {
 				fromaddress = from[0].String()
-			}
-			if err != nil {
-				continue
 			}
 
 			if !strings.Contains(strings.ToLower(fromaddress), "nike") {
@@ -147,13 +140,9 @@ func (n *ImapOpts) getNikeLoginCode() (string, error) {
 				address = to[0].String()
 			}
 
-			if err != nil {
-				continue
-			}
 			if !strings.Contains(strings.ToLower(address), strings.ToLower(n.ReceiverEmail)) {
 				continue
 			}
-			log.Println(address, n.ReceiverEmail)
 
 			for {
 				p, err := mr.NextPart()
@@ -167,15 +156,13 @@ func (n *ImapOpts) getNikeLoginCode() (string, error) {
 				case *mail.InlineHeader:
 					// This is the message's text (can be plain-text or HTML)
 					b, _ := io.ReadAll(p.Body)
-					doc, _ := goquery.NewDocumentFromReader(strings.NewReader(string(b)))
-
-					doc.Find("p").Each(func(_ int, tag *goquery.Selection) {
-						codeSrc, _ := tag.Html()
-						code := between(codeSrc, "requested: ", ". This")
-						if code != "" {
-							codesDate[code] = maildate
-						}
-					})
+					pattern := `(?m)<p class="headline text-center font-size--md font-family--base font-weight--medium" style="[^"]*">(.*?)<\/p>`
+					re := regexp.MustCompile(pattern)
+					match := re.FindStringSubmatch(string(b))
+					if len(match) > 1 {
+						value := match[1]
+						codesDate[value] = maildate
+					}
 				default:
 					continue
 				}
@@ -185,6 +172,7 @@ func (n *ImapOpts) getNikeLoginCode() (string, error) {
 
 	var code string
 	var time int64
+
 	for k, v := range codesDate {
 		if v > time {
 			time = v

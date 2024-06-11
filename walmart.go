@@ -4,10 +4,9 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"strconv"
+	"regexp"
 	"strings"
 
-	"github.com/PuerkitoBio/goquery"
 	"github.com/emersion/go-imap"
 	"github.com/emersion/go-imap/client"
 	"github.com/emersion/go-message/mail"
@@ -124,19 +123,12 @@ func (n *ImapOpts) getWalmartMFA() (string, error) {
 				address = to[0].String()
 			}
 
-			if err != nil {
-				continue
-			}
-
 			if !strings.Contains(strings.ToLower(address), strings.ToLower(n.ReceiverEmail)) {
 				continue
 			}
 
 			if from, err := header.AddressList("From"); err == nil {
 				fromaddress = from[0].String()
-			}
-			if err != nil {
-				continue
 			}
 
 			if !strings.Contains(strings.ToLower(fromaddress), "walmart") {
@@ -145,9 +137,7 @@ func (n *ImapOpts) getWalmartMFA() (string, error) {
 			if subject, err := header.Subject(); err == nil {
 				mailsubject = strings.ToLower(subject)
 			}
-			if err != nil {
-				continue
-			}
+
 			if !strings.Contains(strings.ToLower(mailsubject), "code") {
 				continue
 			}
@@ -164,20 +154,17 @@ func (n *ImapOpts) getWalmartMFA() (string, error) {
 				case *mail.InlineHeader:
 					// This is the message's text (can be plain-text or HTML)
 					b, _ := io.ReadAll(p.Body)
-					doc, _ := goquery.NewDocumentFromReader(strings.NewReader(string(b)))
 
-					doc.Find("td").Each(func(_ int, tag *goquery.Selection) {
-						codeSrc, _ := tag.Html()
-						if strings.Contains(codeSrc, "verification code") {
-							doc, _ := goquery.NewDocumentFromReader(strings.NewReader(codeSrc))
-							doc.Find("strong").Each(func(_ int, tag *goquery.Selection) {
-								code, _ := tag.Html()
-								if _, err := strconv.Atoi(code); err == nil {
-									codesDate[code] = maildate
-								}
-							})
-						}
-					})
+					re := regexp.MustCompile(`<strong>(\d{6})\s</strong>`)
+
+					// Find the first match
+					match := re.FindStringSubmatch(string(b))
+
+					if len(match) > 1 {
+						// The first capturing group contains the verification code
+						verificationCode := match[1]
+						codesDate[verificationCode] = maildate
+					}
 				default:
 					continue
 				}
